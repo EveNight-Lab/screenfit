@@ -1,29 +1,46 @@
-import React, { useState, useEffect } from 'react';
-import { useTranslation } from 'react-i18next';
-import i18n from './i18n';
+import React, { useReducer, useCallback } from 'react';
+import { useTranslation, Trans } from 'react-i18next';
 import Uploader from './components/Uploader';
 import ResultDisplay from './components/ResultDisplay';
 import { calculateBodyMeasurements } from './utils/measurement';
 import AdPlaceholder from './components/AdPlaceholder';
 
 function App() {
-  const { t } = useTranslation();
-  const [measurements, setMeasurements] = useState(null);
-  const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [processedImages, setProcessedImages] = useState([]);
+  const { t, i18n } = useTranslation();
+
+  const initialState = {
+    measurements: null,
+    error: '',
+    isLoading: false,
+    processedImages: [],
+  };
+
+  function reducer(state, action) {
+    switch (action.type) {
+      case 'START_ANALYSIS':
+        return { ...initialState, isLoading: true };
+      case 'ANALYSIS_SUCCESS':
+        return { ...state, isLoading: false, measurements: action.payload.measurements, processedImages: action.payload.processedImages };
+      case 'ANALYSIS_FAILURE':
+        return { ...state, isLoading: false, error: action.payload };
+      case 'RESET':
+        return initialState;
+      default:
+        throw new Error();
+    }
+  }
+
+  const [state, dispatch] = useReducer(reducer, initialState);
+  const { measurements, error, isLoading, processedImages } = state;
 
   const handleLanguageChange = (lang) => {
     i18n.changeLanguage(lang);
   };
 
-  const handleAnalysis = async ({ files, height }) => {
+  const handleAnalysis = useCallback(async ({ files, height }) => {
     if (!files || files.length === 0 || !height) return;
 
-    setIsLoading(true);
-    setError('');
-    setMeasurements(null);
-    setProcessedImages([]);
+    dispatch({ type: 'START_ANALYSIS' });
 
     try {
       // 5초 지연을 위한 Promise
@@ -36,21 +53,60 @@ function App() {
       ]);
 
       const { measurements: results, allProcessedImages } = analysisResult;
-      setMeasurements(results);
-      setProcessedImages(allProcessedImages);
+      dispatch({ type: 'ANALYSIS_SUCCESS', payload: { measurements: results, processedImages: allProcessedImages } });
     } catch (err) {
-      setError(t(err.message) || t('error_mediapipe'));
-    } finally {
-      setIsLoading(false);
+      const errorMessage = err.message && t(err.message, { ns: 'translation', defaultValue: '' }) ? t(err.message) : t('error_mediapipe');
+      dispatch({ type: 'ANALYSIS_FAILURE', payload: errorMessage });
     }
-  };
+  }, [t]);
 
-  const resetState = () => {
-    setMeasurements(null);
-    setError('');
-    setIsLoading(false);
-    setProcessedImages([]);
-  };
+  const resetState = useCallback(() => {
+    dispatch({ type: 'RESET' });
+  }, []);
+
+  const renderContent = () => {
+    if (isLoading) {
+      return (
+        <div className="flex flex-col justify-center items-center h-full min-h-[500px]">
+          <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500"></div>
+          <p className="text-lg font-semibold text-slate-600 dark:text-slate-300 mt-6">{t('calculating')}</p>
+          <AdPlaceholder style={{ minHeight: '280px', width: '336px', marginTop: '24px' }} />
+        </div>
+      );
+    }
+
+    if (error) {
+      return (
+        <div className="flex flex-col justify-center items-center h-full min-h-[500px] text-center bg-red-50 dark:bg-red-900/20 p-8 rounded-lg">
+          <h3 className="text-2xl font-bold text-red-600 dark:text-red-400">{t('error_title')}</h3>
+          <p className="mt-3 text-red-500 dark:text-red-400/80 max-w-md">{error}</p>
+          <button onClick={resetState} className="mt-8 bg-blue-600 text-white font-bold py-2 px-6 rounded-full hover:bg-blue-700 transition-transform hover:scale-105">
+            {t('try_again_button')}
+          </button>
+        </div>
+      );
+    }
+
+    if (measurements) {
+      return (
+        <>
+          <ResultDisplay 
+            measurements={measurements} 
+            processedImages={processedImages}
+            onReset={resetState} 
+          />
+          <AdPlaceholder />
+        </>
+      );
+    }
+
+    return (
+      <>
+        <Uploader onAnalysis={handleAnalysis} />
+        <AdPlaceholder />
+      </>
+    );
+  }
 
   return (
     <div className="bg-slate-100 dark:bg-gray-900 min-h-screen font-sans antialiased break-keep">
@@ -58,7 +114,7 @@ function App() {
         <header className="flex justify-between items-center mb-8">
           <div>
             <h1 className="text-3xl sm:text-4xl font-bold tracking-tight bg-gradient-to-r from-blue-600 to-indigo-500 bg-clip-text text-transparent">
-              {t('main_title')}
+              <Trans i18nKey="main_title" />
             </h1>
             <p className="text-sm sm:text-base text-slate-500 dark:text-slate-400 font-medium">{t('subtitle')}</p>
           </div>
@@ -69,42 +125,7 @@ function App() {
         </header>
 
         <main className="bg-white dark:bg-gray-800 p-4 sm:p-8 rounded-2xl shadow-xl transition-all duration-300 min-h-[500px]">
-          {isLoading && (
-            <div className="flex flex-col justify-center items-center h-full min-h-[500px]">
-              <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500"></div>
-              <p className="text-lg font-semibold text-slate-600 dark:text-slate-300 mt-6">{t('calculating')}</p>
-              <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">{t('ad_loading_notice')}</p>
-              <AdPlaceholder style={{ minHeight: '280px', width: '336px', marginTop: '24px' }} />
-            </div>
-          )}
-
-          {error && !isLoading && (
-            <div className="flex flex-col justify-center items-center h-full min-h-[500px] text-center bg-red-50 dark:bg-red-900/20 p-8 rounded-lg">
-              <h3 className="text-2xl font-bold text-red-600 dark:text-red-400">{t('error_title')}</h3>
-              <p className="mt-3 text-red-500 dark:text-red-400/80 max-w-md">{error}</p>
-              <button onClick={resetState} className="mt-8 bg-blue-600 text-white font-bold py-2 px-6 rounded-full hover:bg-blue-700 transition-transform hover:scale-105">
-                {t('try_again_button')}
-              </button>
-            </div>
-          )}
-
-          {!isLoading && !error && !measurements && (
-            <>
-              <Uploader onAnalysis={handleAnalysis} />
-              <AdPlaceholder />
-            </>
-          )}
-
-          {measurements && (
-            <>
-              <ResultDisplay 
-                measurements={measurements} 
-                processedImages={processedImages}
-                onReset={resetState} 
-              />
-              <AdPlaceholder />
-            </>
-          )}
+          {renderContent()}
         </main>
         <footer className="text-center mt-8 text-sm text-slate-500 dark:text-slate-400">
           <p>{t('privacy_note')}</p>
