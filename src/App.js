@@ -113,7 +113,7 @@ function App() {
       <div className="container mx-auto p-4 sm:p-6 lg:p-8">
         <header className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-3xl sm:text-4xl font-bold tracking-tight bg-gradient-to-r from-blue-600 to-indigo-500 bg-clip-text text-transparent">
+            <h1 className="text-3xl sm:text-4xl font-bold tracking-tight bg-gradient-to-r from-blue-600 to-indigo-500 bg-clip-text text-transparent dark:[text-shadow:0_0_5px_rgba(255,255,255,0.5)]">
               <Trans i18nKey="main_title" />
             </h1>
             <p className="text-sm sm:text-base text-slate-500 dark:text-slate-400 font-medium">{t('subtitle')}</p>
@@ -131,9 +131,13 @@ function App() {
           <p>{t('privacy_note')}</p>
         </footer>
         <div className="text-center mt-4">
-            <p className="text-sm font-semibold bg-gradient-to-r from-red-800 to-purple-600 bg-clip-text text-transparent">
-                {t('brand_name')}
-            </p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            <span className="font-semibold bg-gradient-to-r from-red-800 to-purple-600 bg-clip-text text-transparent dark:[text-shadow:0_0_5px_rgba(255,255,255,0.5)]">
+              {t('brand_name')}
+            </span>
+            <span className="mx-2">|</span>
+            <a href="mailto:dorubru0331@gmail.com" className="hover:underline">dorubru0331@gmail.com</a>
+          </p>
         </div>
       </div>
     </div>

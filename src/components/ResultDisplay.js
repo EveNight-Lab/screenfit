@@ -96,7 +96,7 @@ const ResultDisplay = ({ measurements, processedImages, onReset }) => {
 
   const measurementItems = useMemo(() => {
     if (!measurements) return [];
-    const { shoulderWidth, armLength, torsoLength, chestCircumference, waistCircumference, hipCircumference, outseam, confidenceShoulder, confidenceArm, confidenceLeg, confidence } = measurements;
+    const { shoulderWidth, sleeveLength, torsoLength, chestCircumference, waistCircumference, hipCircumference, outseam, confidenceShoulder, confidenceArm, confidenceLeg, confidence } = measurements;
     
     return [
         {
@@ -118,13 +118,13 @@ const ResultDisplay = ({ measurements, processedImages, onReset }) => {
         },
         {
             label: t('sleeve_length'),
-            value: armLength?.toFixed(1),
+            value: sleeveLength?.toFixed(1),
             confidence: confidenceArm,
             color: measurementStyles.sleeve_length.color,
             recommendations: [
-                { label: t('fit_style_sleeve_wrist'), value: (armLength - 2).toFixed(1) },
-                { label: t('fit_style_sleeve_hand'), value: (armLength + 2).toFixed(1) },
-                { label: t('fit_style_sleeve_long'), value: (armLength + 5).toFixed(1) },
+                { label: t('fit_style_sleeve_wrist'), value: (sleeveLength - 2).toFixed(1) },
+                { label: t('fit_style_sleeve_hand'), value: (sleeveLength + 2).toFixed(1) },
+                { label: t('fit_style_sleeve_long'), value: (sleeveLength + 5).toFixed(1) },
             ]
         },
         {
@@ -172,7 +172,7 @@ const ResultDisplay = ({ measurements, processedImages, onReset }) => {
         const ctx = canvas.getContext('2d');
         const img = new Image();
         img.crossOrigin = 'Anonymous';
-        img.src = URL.createObjectURL(activeImage.originalFile);
+        img.src = activeImage.resizedImageSrc; // 원본 파일 대신 리사이징된 이미지 소스를 사용
         img.onload = () => {
             const hRatio = canvas.width / img.width;
             const vRatio = canvas.height / img.height;
@@ -189,7 +189,6 @@ const ResultDisplay = ({ measurements, processedImages, onReset }) => {
             }));
 
             drawMeasurementLines(ctx, scaledLandmarks, measurementStyles, activeImage.isUsedFor2D || activeImage.isUsedFor3D);
-            URL.revokeObjectURL(img.src);
         }
     }
   }, [activeImage]);
@@ -220,51 +219,68 @@ const ResultDisplay = ({ measurements, processedImages, onReset }) => {
   };
 
   const handleSaveOrShare = async (action) => {
-    const canvas = document.getElementById('result-capture-wrapper');
-    if (!canvas) return;
-  
-    const resultCanvas = await html2canvas(canvas, {
+    try {
+      const isMobile = /Mobi/i.test(window.navigator.userAgent);
+      const captureElement = document.getElementById('result-capture-wrapper');
+      if (!captureElement) return;
+
+      const resultCanvas = await html2canvas(captureElement, {
         useCORS: true,
         scale: 2,
-        backgroundColor: window.getComputedStyle(document.body).backgroundColor,
-    });
+        backgroundColor: window.getComputedStyle(document.body).getPropertyValue('background-color'),
+      });
 
-    if (action === 'save') {
+      if (action === 'save') {
         const image = resultCanvas.toDataURL('image/png', 1.0);
         const link = document.createElement('a');
         link.href = image;
         link.download = 'screanfit_results.png';
         link.click();
         showNotification(t('saved_success'));
-    } else if (action === 'share') {
-        resultCanvas.toBlob(async (blob) => {
-            if (!blob) return showNotification(t('share_error'));
+      } else if (action === 'share') {
+        resultCanvas.toBlob(
+          async (blob) => {
+            if (!blob) {
+              showNotification(t('share_error'));
+              return;
+            }
             const file = new File([blob], 'screanfit_results.png', { type: 'image/png' });
             if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                try {
-                    await navigator.share({ files: [file], title: t('result_title'), text: t('fit_guide_intro') });
-                    showNotification(t('share_success'));
-                } catch (error) {
-                    console.error('Share error:', error);
-                    showNotification(t('share_error'));
+              try {
+                await navigator.share({
+                  files: [file],
+                  title: t('result_title'),
+                  text: t('fit_guide_intro'),
+                });
+                showNotification(t('share_success'));
+              } catch (error) {
+                console.error('Share error:', error);
+                if (error.name !== 'AbortError') {
+                  showNotification(t('share_error'));
                 }
+              }
             } else {
-                showNotification(t('share_not_supported'));
+              showNotification(t('share_not_supported'));
             }
-        }, 'image/png');
+          },
+          'image/png'
+        );
+      }
+    } catch (e) {
+      console.error("Image save/share error", e);
+      showNotification(t('share_error'));
     }
   };
-
   return (
     <div className="animate-fade-in">
       {notification && <div className="fixed top-5 right-5 bg-green-600 text-white px-5 py-3 rounded-full shadow-lg z-50 animate-fade-in-down">{notification}</div>}
       
-      <div id="result-capture-wrapper" className="bg-slate-50 dark:bg-gray-900/70 p-4 sm:p-6 lg:p-8 rounded-2xl">
+      <div id="result-capture-wrapper" className="bg-slate-50 dark:bg-gray-900/70 p-4 sm:p-6 lg:p-8 rounded-2xl" >
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
-          <div className="space-y-6">
+          <div id="image-capture-container" className="space-y-6">
             <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 text-center lg:text-left break-keep">{t('result_title')}</h2>
-            <div className="relative w-full aspect-[3/4] bg-slate-100 dark:bg-gray-900/50 rounded-xl overflow-hidden ring-1 ring-slate-200 dark:ring-gray-700">
-              <canvas ref={canvasRef} width="512" height="682" className="w-full h-full object-contain"></canvas>
+            <div className="relative w-full bg-slate-100 dark:bg-gray-900/50 rounded-xl overflow-hidden ring-1 ring-slate-200 dark:ring-gray-700 p-4">
+              <canvas ref={canvasRef} width="512" height="682" className="w-full h-full object-contain" id="canvas-placeholder"></canvas>
               {processedImages.length > 1 && (
                   <>
                     <button onClick={handlePrevImage} className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/30 text-white p-2 rounded-full hover:bg-black/50 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-white">&lt;</button>
@@ -274,7 +290,7 @@ const ResultDisplay = ({ measurements, processedImages, onReset }) => {
             </div>
             {measurements && measurements.confidence < 0.75 && <p className="text-yellow-600 dark:text-yellow-400 text-sm bg-yellow-50 dark:bg-yellow-900/20 p-3 rounded-lg">{t('accuracy_warning')}</p>}
           </div>
-          <div className="space-y-4">
+          <div id="measurements-capture-container" className="space-y-4">
               {measurementItems.map(item => <MeasurementCard key={item.label} item={item} />)}
           </div>
         </div>
