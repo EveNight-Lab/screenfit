@@ -20,16 +20,17 @@ const Uploader = ({ onAnalysis }) => {
     }
     
     setFiles(prevFiles => {
-        if (prevFiles.length + acceptedFiles.length > 3) {
-            setError(t('error_file_limit'));
-            return prevFiles;
-        }
-        const newFiles = acceptedFiles.map(file => ({
-            id: Date.now() + Math.random(),
-            preview: URL.createObjectURL(file),
-            originalFile: file,
-        }));
-        return [...prevFiles, ...newFiles];
+      const totalFiles = prevFiles.length + acceptedFiles.length;
+      if (totalFiles > 3) {
+          setError(t('error_file_limit'));
+          return prevFiles; // 새 파일을 추가하지 않고 기존 파일 목록을 반환
+      }
+      const newFiles = acceptedFiles.map(file => ({
+          id: Date.now() + Math.random(),
+          preview: URL.createObjectURL(file),
+          originalFile: file,
+      }));
+      return [...prevFiles, ...newFiles];
     });
   }, [t]);
 

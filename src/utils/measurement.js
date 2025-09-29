@@ -1,5 +1,14 @@
 import { Pose, POSE_LANDMARKS } from '@mediapipe/pose';
 
+const {
+  LEFT_SHOULDER, RIGHT_SHOULDER,
+  LEFT_HIP, RIGHT_HIP,
+  LEFT_ANKLE, RIGHT_ANKLE, 
+  LEFT_ELBOW, LEFT_WRIST, RIGHT_WRIST,
+  NOSE,
+  LEFT_HEEL, RIGHT_HEEL
+} = POSE_LANDMARKS;
+
 const MODEL_COMPLEXITY = 1;
 const MAX_IMAGE_SIZE = 1024; // 이미지 최대 크기를 1024px로 제한
 
@@ -14,14 +23,10 @@ const createImageElement = (imageFile) => {
         const ctx = canvas.getContext('2d');
         let { width, height } = originalImage;
 
-        if (width > MAX_IMAGE_SIZE || height > MAX_IMAGE_SIZE) {
-          if (width > height) {
-            height = Math.round(height * (MAX_IMAGE_SIZE / width));
-            width = MAX_IMAGE_SIZE;
-          } else {
-            width = Math.round(width * (MAX_IMAGE_SIZE / height));
-            height = MAX_IMAGE_SIZE;
-          }
+        if (width > MAX_IMAGE_SIZE || height > MAX_IMAGE_SIZE) { 
+          const ratio = Math.min(MAX_IMAGE_SIZE / width, MAX_IMAGE_SIZE / height);
+          width = Math.round(width * ratio);
+          height = Math.round(height * ratio);
         }
 
         canvas.width = width;
@@ -88,12 +93,17 @@ export const calculateBodyMeasurements = async (files, userHeightCm) => {
   for (const fileWrapper of files) {
     const imageElement = await createImageElement(fileWrapper.originalFile);
     const result = await getLandmarksForImage(imageElement, pose);
+    // pixelToCmRatio 계산 기준을 코-발뒤꿈치 수직 픽셀 거리로 명확히 함
+    const topPointY = result.landmarks[NOSE].y;
+    const bottomPointY = Math.max(result.landmarks[LEFT_HEEL].y, result.landmarks[RIGHT_HEEL].y);
+    const bodyHeightInPixels = (bottomPointY - topPointY) * imageElement.height;
+    const pixelToCmRatio = userHeightCm / bodyHeightInPixels;
     const classification = classifyPose(result.landmarks);
     allProcessedImages.push({ 
       ...result, 
       ...classification, 
-      originalFile: fileWrapper.originalFile, // 원본 파일 객체 유지
       resizedImageSrc: imageElement.src,      // 리사이징된 이미지 데이터 URL 추가
+      pixelToCmRatio: pixelToCmRatio,         // 각 이미지의 고유 비율 저장
       id: fileWrapper.id 
     });
   }
@@ -116,80 +126,74 @@ export const calculateBodyMeasurements = async (files, userHeightCm) => {
       isUsedFor3D: false, // 측면 사진을 더 이상 사용하지 않음
   }));
 
-  // 어깨너비는 가장 정확한 사진 한 장으로만 측정하여 각도로 인한 오차를 최소화
-  const { landmarks: frontLmForShoulder, width: frontW, height: frontH } = frontImage;
-  const topPointForShoulder = frontLmForShoulder[POSE_LANDMARKS.NOSE];
-  const bottomYForShoulder = Math.max(frontLmForShoulder[POSE_LANDMARKS.LEFT_HEEL].y, frontLmForShoulder[POSE_LANDMARKS.RIGHT_HEEL].y);
-  const bodyHeightInPixelsForShoulder = (bottomYForShoulder - topPointForShoulder.y) * frontH;
-  const pixelsToCmRatioForShoulder = userHeightCm / bodyHeightInPixelsForShoulder;
-  const getDistanceInCmForShoulder = (p1, p2) => Math.sqrt(Math.pow((p1.x - p2.x) * frontW, 2) + Math.pow((p1.y - p2.y) * frontH, 2)) * pixelsToCmRatioForShoulder;
-  
-  const shoulderLForShoulder = frontLmForShoulder[POSE_LANDMARKS.LEFT_SHOULDER];
-  const shoulderRForShoulder = frontLmForShoulder[POSE_LANDMARKS.RIGHT_SHOULDER];
-  const shoulderWidth = getDistanceInCmForShoulder(shoulderLForShoulder, shoulderRForShoulder) * 1.08;
-
-
-  // 어깨너비를 제외한 나머지 값들은 여러 사진을 평균내어 안정성 확보
+  // 모든 측정값은 여러 장의 'goodFrontImages'에서 계산 후 평균을 내어 안정성 확보
   const measurementsList = [];
   for (const image of goodFrontImages) {
-    const { landmarks: lm, width: w, height: h } = image;
+    const { landmarks: lm, width: w, height: h, pixelToCmRatio } = image;
+    
+    const getDistanceInCm = (p1, p2) => Math.sqrt(Math.pow((p1.x - p2.x) * w, 2) + Math.pow((p1.y - p2.y) * h, 2)) * pixelToCmRatio;
 
-    const topPoint = lm[POSE_LANDMARKS.NOSE];
-    const bottomY = Math.max(lm[POSE_LANDMARKS.LEFT_HEEL].y, lm[POSE_LANDMARKS.RIGHT_HEEL].y);
-    const bodyHeightInPixels = (bottomY - topPoint.y) * h;
-    const pixelsToCmRatio = userHeightCm / bodyHeightInPixels;
-
-    const getDistanceInCm = (p1, p2) => Math.sqrt(Math.pow((p1.x - p2.x) * w, 2) + Math.pow((p1.y - p2.y) * h, 2)) * pixelsToCmRatio;
-
-    const shoulderL = lm[POSE_LANDMARKS.LEFT_SHOULDER];
-    const shoulderR = lm[POSE_LANDMARKS.RIGHT_SHOULDER];
-    const ankleL = lm[POSE_LANDMARKS.LEFT_ANKLE];
-    const ankleR = lm[POSE_LANDMARKS.RIGHT_ANKLE];
-    const armLengthL = getDistanceInCm(lm[POSE_LANDMARKS.LEFT_SHOULDER], lm[POSE_LANDMARKS.LEFT_ELBOW]) + getDistanceInCm(lm[POSE_LANDMARKS.LEFT_ELBOW], lm[POSE_LANDMARKS.LEFT_WRIST]);
-    const armLengthR = getDistanceInCm(lm[POSE_LANDMARKS.RIGHT_SHOULDER], lm[POSE_LANDMARKS.RIGHT_ELBOW]) + getDistanceInCm(lm[POSE_LANDMARKS.RIGHT_ELBOW], lm[POSE_LANDMARKS.RIGHT_WRIST]);
-    const sleeveLength = (armLengthL + armLengthR) / 2;
-
-    const shoulderCenterY = (shoulderL.y + shoulderR.y) / 2;
-    const kneeL = lm[POSE_LANDMARKS.LEFT_KNEE];
-    const kneeR = lm[POSE_LANDMARKS.RIGHT_KNEE];
-    const kneeCenterY = (kneeL.y + kneeR.y) / 2;
-    const correctedHipCenterY = (shoulderCenterY + kneeCenterY) / 2;
-
-    const torsoTopY = (topPoint.y + shoulderCenterY) / 2;
-    const torsoLength = Math.abs(correctedHipCenterY - torsoTopY) * h * pixelsToCmRatio;
-    const outseam = Math.abs((ankleL.y + ankleR.y) / 2 - correctedHipCenterY) * h * pixelsToCmRatio;
-
-    measurementsList.push({ sleeveLength, outseam, torsoLength });
+    const shoulderL = lm[LEFT_SHOULDER];
+    const shoulderR = lm[RIGHT_SHOULDER];
+    const ankleL = lm[LEFT_ANKLE];
+    const ankleR = lm[RIGHT_ANKLE];
+    const hipL = lm[LEFT_HIP];
+    const hipR = lm[RIGHT_HIP];
+    const shoulderWidth = getDistanceInCm(shoulderL, shoulderR) * 1.15; // 보정 계수 상향
+    // 소매 길이: 어깨부터 손목까지의 거리로, 가장 기본적인 '손목 기장'을 기준으로 함
+    const sleeveLength = (getDistanceInCm(lm[LEFT_SHOULDER], lm[LEFT_ELBOW]) + getDistanceInCm(lm[LEFT_ELBOW], lm[LEFT_WRIST]));
+    
+    const shoulderCenter = { x: (shoulderL.x + shoulderR.x) / 2, y: (shoulderL.y + shoulderR.y) / 2 };
+    const hipCenter = { x: (hipL.x + hipR.x) / 2, y: (hipL.y + hipR.y) / 2 };
+    const waistPoint = { x: hipCenter.x, y: (shoulderCenter.y * 0.18 + hipCenter.y * 0.82) }; // 하의 총장 측정 시작점을 허리선에 가깝게 조정
+    const torsoLength = getDistanceInCm(shoulderCenter, hipCenter) * 1.1;
+    const ankleCenter = { x: (ankleL.x + ankleR.x) / 2, y: (ankleL.y + ankleR.y) / 2 };
+    const outseam = getDistanceInCm(waistPoint, ankleCenter); // 하의 총장 측정 기준을 'hipCenter'에서 'waistPoint'로 변경
+    
+    measurementsList.push({ shoulderWidth, sleeveLength, outseam, torsoLength });
   }
 
-  const avgMeasurements = measurementsList.reduce((acc, curr) => {
-    Object.keys(curr).forEach(key => acc[key] = (acc[key] || 0) + curr[key]);
+  // 어깨너비는 최대값을, 나머지 측정값은 평균을 사용하도록 로직 수정
+  const finalMeasurements = measurementsList.reduce((acc, curr, index) => {
+    if (index === 0) {
+      return { ...curr }; // 첫 번째 측정값으로 초기화
+    }
+    // 어깨너비는 최대값으로 업데이트
+    acc.shoulderWidth = Math.max(acc.shoulderWidth, curr.shoulderWidth);
+    // 나머지 값들은 합산
+    acc.sleeveLength += curr.sleeveLength;
+    acc.outseam += curr.outseam;
+    acc.torsoLength += curr.torsoLength;
     return acc;
   }, {});
 
-  Object.keys(avgMeasurements).forEach(key => avgMeasurements[key] /= measurementsList.length);
+  // 합산된 값들을 사진 개수로 나누어 평균 계산 (어깨너비 제외)
+  if (measurementsList.length > 1) {
+    finalMeasurements.sleeveLength /= measurementsList.length;
+    finalMeasurements.outseam /= measurementsList.length;
+    finalMeasurements.torsoLength /= measurementsList.length;
+  }
 
   const { landmarks: frontLm } = frontImage;
-  const shoulderL = frontLm[POSE_LANDMARKS.LEFT_SHOULDER];
-  const shoulderR = frontLm[POSE_LANDMARKS.RIGHT_SHOULDER];
-  const hipL = frontLm[POSE_LANDMARKS.LEFT_HIP];
-  const hipR = frontLm[POSE_LANDMARKS.RIGHT_HIP];
-  const topPoint = frontLm[POSE_LANDMARKS.NOSE];
-  const bottomY = Math.max(frontLm[POSE_LANDMARKS.LEFT_HEEL].y, frontLm[POSE_LANDMARKS.RIGHT_HEEL].y);
+  const shoulderL = frontLm[LEFT_SHOULDER];
+  const shoulderR = frontLm[RIGHT_SHOULDER];
+  const hipL = frontLm[LEFT_HIP];
+  const hipR = frontLm[RIGHT_HIP];
+  const topPoint = frontLm[NOSE];
+  const bottomY = Math.max(frontLm[LEFT_HEEL].y, frontLm[RIGHT_HEEL].y);
   const hipCenterY = (hipL.y + hipR.y) / 2;
   const bodyRatio = (hipCenterY - topPoint.y) / (bottomY - hipCenterY);
 
   const confidenceShoulder = (shoulderL.visibility + shoulderR.visibility) / 2;
-  const confidenceArm = (frontLm[POSE_LANDMARKS.LEFT_WRIST].visibility + frontLm[POSE_LANDMARKS.RIGHT_WRIST].visibility) / 2;
-  const confidenceLeg = (frontLm[POSE_LANDMARKS.LEFT_ANKLE].visibility + frontLm[POSE_LANDMARKS.RIGHT_ANKLE].visibility) / 2;
+  const confidenceArm = (frontLm[LEFT_WRIST].visibility + frontLm[RIGHT_WRIST].visibility) / 2;
+  const confidenceLeg = (frontLm[LEFT_ANKLE].visibility + frontLm[RIGHT_ANKLE].visibility) / 2;
   const totalConfidence = (confidenceShoulder + confidenceArm + confidenceLeg) / 3;
 
   pose.close();
 
   return {
     measurements: {
-        ...avgMeasurements,
-        shoulderWidth,
+        ...finalMeasurements,
         bodyRatio: bodyRatio,
         confidence: totalConfidence,
         confidenceShoulder,
@@ -198,4 +202,52 @@ export const calculateBodyMeasurements = async (files, userHeightCm) => {
     },
     allProcessedImages: allProcessedImages,
   };
+};
+
+export const recalculateMeasurements = (points, allProcessedImages, originalMeasurements) => {
+  const goodFrontImages = allProcessedImages.filter(p => p.isUsedFor2D);
+  if (goodFrontImages.length === 0) {
+    return originalMeasurements; // 계산할 이미지가 없으면 원본 값 반환
+  }
+
+  const measurementsList = [];
+  for (const image of goodFrontImages) {
+    const { pixelToCmRatio, width: w, height: h } = image;
+    const getDistanceInCm = (p1, p2) => Math.sqrt(Math.pow((p1.x - p2.x), 2) + Math.pow((p1.y - p2.y), 2)) * pixelToCmRatio;
+
+    const shoulderL = points[LEFT_SHOULDER];
+    const shoulderR = points[RIGHT_SHOULDER];
+    const wristL = points[LEFT_WRIST];
+    const elbowL = points[LEFT_ELBOW];
+    const hipL = points[LEFT_HIP];
+    const hipR = points[RIGHT_HIP];
+    const ankleL = points[LEFT_ANKLE];
+
+    const shoulderWidth = getDistanceInCm(shoulderL, shoulderR) * 1.15;
+    const sleeveLength = (getDistanceInCm(shoulderL, elbowL) + getDistanceInCm(elbowL, wristL));
+    const shoulderCenter = { x: (shoulderL?.x + shoulderR?.x) / 2, y: (shoulderL?.y + shoulderR?.y) / 2 };
+    const hipCenter = { x: (hipL?.x + hipR?.x) / 2, y: (hipL?.y + hipR?.y) / 2 };
+    const torsoLength = getDistanceInCm(shoulderCenter, hipCenter) * 1.1;
+    const outseam = getDistanceInCm(hipCenter, ankleL);
+
+    measurementsList.push({ shoulderWidth, sleeveLength, outseam, torsoLength });
+  }
+
+  // 초기 계산과 동일한 로직으로 최종 측정값 집계
+  const finalMeasurements = measurementsList.reduce((acc, curr, index) => {
+    if (index === 0) return { ...curr };
+    acc.shoulderWidth = Math.max(acc.shoulderWidth, curr.shoulderWidth);
+    acc.sleeveLength += curr.sleeveLength;
+    acc.outseam += curr.outseam;
+    acc.torsoLength += curr.torsoLength;
+    return acc;
+  }, {});
+
+  if (measurementsList.length > 1) {
+    finalMeasurements.sleeveLength /= measurementsList.length;
+    finalMeasurements.outseam /= measurementsList.length;
+    finalMeasurements.torsoLength /= measurementsList.length;
+  }
+
+  return { ...originalMeasurements, ...finalMeasurements };
 };
