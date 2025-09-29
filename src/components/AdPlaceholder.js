@@ -1,29 +1,27 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 
 const AdPlaceholder = ({ style }) => {
-  const defaultStyle = {
-    background: '#f0f0f0', // Light gray background
-    border: '2px dashed #ccc', // Dashed border
-    color: '#888', // Gray text
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    textAlign: 'center',
-    width: '100%',
-    minHeight: '90px', // Common ad height
-    margin: '16px 0',
-    padding: '16px',
-    borderRadius: '8px',
-    fontSize: '14px',
-    fontWeight: 'bold',
-  };
-
-  const combinedStyle = { ...defaultStyle, ...style };
+  useEffect(() => {
+    try {
+      // window.adsbygoogle이 배열이 아니면 초기화
+      if (!Array.isArray(window.adsbygoogle)) {
+        window.adsbygoogle = [];
+      }
+      // 광고를 요청합니다.
+      window.adsbygoogle.push({});
+    } catch (e) {
+      console.error("Adsense error:", e);
+    }
+  }, []);
 
   return (
-    <div style={combinedStyle}>
-      {/* 나중에 이 div를 구글 애드센스 코드로 교체하세요. */}
-      <p>광고 영역 (Ad Placeholder)</p>
+    <div style={style}>
+      <ins className="adsbygoogle"
+           style={{ display: 'block' }}
+           data-ad-client="ca-pub-2526415204860627"
+           data-ad-slot="8183828185"
+           data-ad-format="auto"
+           data-full-width-responsive="true"></ins>
     </div>
   );
 };
