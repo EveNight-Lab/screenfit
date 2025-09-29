@@ -134,7 +134,7 @@ function App() {
           )}
         </footer>
         <div className="text-center mt-4">
-          <span className="font-semibold bg-gradient-to-r from-red-800 to-purple-600 bg-clip-text text-transparent dark:[text-shadow:0_0_5px_rgba(255,255,255,0.5)]">
+          <span className="text-sm font-semibold bg-gradient-to-r from-red-800 to-purple-600 bg-clip-text text-transparent dark:[text-shadow:0_0_5px_rgba(255,255,255,0.5)]">
             {t('brand_name')}
           </span>
           <span className="mx-2 text-slate-500 dark:text-slate-400">|</span>

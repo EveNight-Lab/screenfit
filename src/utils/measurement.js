@@ -212,7 +212,7 @@ export const recalculateMeasurements = (points, allProcessedImages, originalMeas
 
   const measurementsList = [];
   for (const image of goodFrontImages) {
-    const { pixelToCmRatio, width: w, height: h } = image;
+    const { pixelToCmRatio } = image;
     const getDistanceInCm = (p1, p2) => Math.sqrt(Math.pow((p1.x - p2.x), 2) + Math.pow((p1.y - p2.y), 2)) * pixelToCmRatio;
 
     const shoulderL = points[LEFT_SHOULDER];
