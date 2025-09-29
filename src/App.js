@@ -129,15 +129,16 @@ function App() {
         </main>
         <footer className="text-center mt-8 text-sm text-slate-500 dark:text-slate-400">
           <p>{t('privacy_note')}</p>
+          {measurements && (
+            <p className="mt-2 text-xs text-slate-400 dark:text-slate-500">{t('measurement_disclaimer')}</p>
+          )}
         </footer>
         <div className="text-center mt-4">
-          <p className="text-sm text-slate-500 dark:text-slate-400">
-            <span className="font-semibold bg-gradient-to-r from-red-800 to-purple-600 bg-clip-text text-transparent dark:[text-shadow:0_0_5px_rgba(255,255,255,0.5)]">
-              {t('brand_name')}
-            </span>
-            <span className="mx-2">|</span>
-            <a href="mailto:dorubru0331@gmail.com" className="hover:underline">dorubru0331@gmail.com</a>
-          </p>
+          <span className="font-semibold bg-gradient-to-r from-red-800 to-purple-600 bg-clip-text text-transparent dark:[text-shadow:0_0_5px_rgba(255,255,255,0.5)]">
+            {t('brand_name')}
+          </span>
+          <span className="mx-2 text-slate-500 dark:text-slate-400">|</span>
+          <a href="mailto:dorubru0331@gmail.com" className="text-sm text-slate-500 dark:text-slate-400 hover:underline">dorubru0331@gmail.com</a>
         </div>
       </div>
     </div>
