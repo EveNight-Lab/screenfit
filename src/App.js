@@ -1,5 +1,5 @@
-import React, { useReducer, useCallback, useEffect, useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import React, { useReducer, useCallback, useEffect, useState, useMemo } from 'react';
+import { useTranslation, Trans } from 'react-i18next';
 import Uploader from './components/Uploader';
 import ResultDisplay from './components/ResultDisplay';
 import { calculateBodyMeasurements } from './utils/measurement';
@@ -33,12 +33,12 @@ function App() {
   const [state, dispatch] = useReducer(reducer, initialState);
   const { measurements, error, isLoading, processedImages } = state;
 
-  const loadingTips = [
+  const loadingTips = useMemo(() => [
     t('loading_tip1'),
     t('loading_tip2'),
     t('loading_tip3'),
     t('loading_tip4'),
-  ];
+  ], [t]);
   const [currentTip, setCurrentTip] = useState(loadingTips[0]);
 
   useEffect(() => {
@@ -129,7 +129,7 @@ function App() {
       <div className="container mx-auto p-4 sm:p-6 lg:p-8">
         <header className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-3xl sm:text-4xl font-bold tracking-tight bg-gradient-to-r from-blue-600 to-indigo-500 bg-clip-text text-transparent dark:[text-shadow:0_0_5px_rgba(255,255,255,0.5)]">{t('main_title')}</h1>
+            <h1 className="text-3xl sm:text-4xl font-bold tracking-tight bg-gradient-to-r from-blue-600 to-indigo-500 bg-clip-text text-transparent dark:[text-shadow:0_0_5px_rgba(255,255,255,0.5)]"><Trans i18nKey="main_title" /></h1>
             <p className="text-sm sm:text-base text-slate-500 dark:text-slate-400 font-medium">{t('subtitle')}</p>
           </div>
           <div className="flex items-center bg-slate-200 dark:bg-gray-700 rounded-full p-1 text-sm font-medium whitespace-nowrap">
