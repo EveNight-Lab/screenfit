@@ -43,15 +43,9 @@ function App() {
     dispatch({ type: 'START_ANALYSIS' });
 
     try {
-      // 5초 지연을 위한 Promise
-      const minDelay = new Promise(resolve => setTimeout(resolve, 5000));
-
-      // 신체 측정과 5초 지연을 동시에 실행
-      const [analysisResult] = await Promise.all([
-        calculateBodyMeasurements(files, height),
-        minDelay
-      ]);
-
+      // 신체 측정을 바로 실행합니다.
+      const analysisResult = await calculateBodyMeasurements(files, height);
+      
       const { measurements: results, allProcessedImages } = analysisResult;
       dispatch({ type: 'ANALYSIS_SUCCESS', payload: { measurements: results, processedImages: allProcessedImages } });
     } catch (err) {
@@ -70,7 +64,6 @@ function App() {
         <div className="flex flex-col justify-center items-center h-full min-h-[500px]">
           <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500"></div>
           <p className="text-lg font-semibold text-slate-600 dark:text-slate-300 mt-6">{t('calculating')}</p>
-          <AdPlaceholder style={{ minHeight: '280px', width: '336px', marginTop: '24px' }} />
         </div>
       );
     }
