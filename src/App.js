@@ -32,6 +32,7 @@ function App() {
 
   const [state, dispatch] = useReducer(reducer, initialState);
   const { measurements, error, isLoading, processedImages } = state;
+  const [isHelpModalOpen, setHelpModalOpen] = useState(false);
 
   const loadingTips = useMemo(() => [
     t('loading_tip1'),
@@ -125,11 +126,38 @@ function App() {
   }
 
   return (
-    <div className="bg-slate-100 dark:bg-gray-900 min-h-screen font-sans antialiased break-keep">
+    <div className="bg-slate-100 dark:bg-gray-900 min-h-screen font-sans antialiased break-keep selection:bg-blue-200 dark:selection:bg-blue-800/50">
+      {isHelpModalOpen && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center z-50 p-4 animate-fade-in-fast"
+          onClick={() => setHelpModalOpen(false)}
+        >
+          <div 
+            className="bg-white dark:bg-gray-800 p-6 sm:p-8 rounded-2xl shadow-2xl max-w-2xl w-full relative transform transition-transform duration-300 scale-95 animate-slide-up"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button onClick={() => setHelpModalOpen(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+            <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 mb-4">{t('help_title')}</h2>
+            <div className="text-slate-600 dark:text-slate-300 space-y-4">
+              <p>{t('help_p1')}</p>
+              <p>{t('help_p2')}</p>
+              <p className="font-semibold text-slate-700 dark:text-slate-200">{t('help_p3')}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="container mx-auto p-4 sm:p-6 lg:p-8">
         <header className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-3xl sm:text-4xl font-bold tracking-tight bg-gradient-to-r from-blue-600 to-indigo-500 bg-clip-text text-transparent dark:[text-shadow:0_0_5px_rgba(255,255,255,0.5)]"><Trans i18nKey="main_title" /></h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-3xl sm:text-4xl font-bold tracking-tight bg-gradient-to-r from-blue-600 to-indigo-500 bg-clip-text text-transparent dark:[text-shadow:0_0_5px_rgba(255,255,255,0.5)]">
+              <Trans i18nKey="main_title" />
+            </h1>
+            <button onClick={() => setHelpModalOpen(true)} className="text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors" aria-label={t('help_title')}>
+              <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd"></path></svg>
+            </button>
             <p className="text-sm sm:text-base text-slate-500 dark:text-slate-400 font-medium">{t('subtitle')}</p>
           </div>
           <div className="flex items-center bg-slate-200 dark:bg-gray-700 rounded-full p-1 text-sm font-medium whitespace-nowrap">
