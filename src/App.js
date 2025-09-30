@@ -1,5 +1,5 @@
-import React, { useReducer, useCallback } from 'react';
-import { useTranslation, Trans } from 'react-i18next';
+import React, { useReducer, useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import Uploader from './components/Uploader';
 import ResultDisplay from './components/ResultDisplay';
 import { calculateBodyMeasurements } from './utils/measurement';
@@ -33,6 +33,25 @@ function App() {
   const [state, dispatch] = useReducer(reducer, initialState);
   const { measurements, error, isLoading, processedImages } = state;
 
+  const loadingTips = [
+    t('loading_tip1'),
+    t('loading_tip2'),
+    t('loading_tip3'),
+    t('loading_tip4'),
+  ];
+  const [currentTip, setCurrentTip] = useState(loadingTips[0]);
+
+  useEffect(() => {
+    if (isLoading) {
+      const tipInterval = setInterval(() => {
+        const randomIndex = Math.floor(Math.random() * loadingTips.length);
+        setCurrentTip(loadingTips[randomIndex]);
+      }, 3500); // 3.5초마다 팁 변경
+
+      return () => clearInterval(tipInterval);
+    }
+  }, [isLoading, loadingTips]);
+
   const handleLanguageChange = (lang) => {
     i18n.changeLanguage(lang);
   };
@@ -61,9 +80,13 @@ function App() {
   const renderContent = () => {
     if (isLoading) {
       return (
-        <div className="flex flex-col justify-center items-center h-full min-h-[500px]">
-          <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500"></div>
-          <p className="text-lg font-semibold text-slate-600 dark:text-slate-300 mt-6">{t('calculating')}</p>
+        <div className="flex flex-col justify-center items-center h-full min-h-[500px] bg-slate-50 dark:bg-gray-800/50 rounded-2xl p-8 text-center">
+          <div className="relative h-20 w-20">
+            <div className="absolute inset-0 rounded-full border-4 border-blue-200 dark:border-blue-800"></div>
+            <div className="absolute inset-0 rounded-full border-t-4 border-blue-500 animate-spin"></div>
+          </div>
+          <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 mt-8">{t('calculating')}</h3>
+          <p className="text-slate-500 dark:text-slate-400 mt-3 max-w-xs animate-fade-in">{currentTip}</p>
         </div>
       );
     }
@@ -106,9 +129,7 @@ function App() {
       <div className="container mx-auto p-4 sm:p-6 lg:p-8">
         <header className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-3xl sm:text-4xl font-bold tracking-tight bg-gradient-to-r from-blue-600 to-indigo-500 bg-clip-text text-transparent dark:[text-shadow:0_0_5px_rgba(255,255,255,0.5)]">
-              <Trans i18nKey="main_title" />
-            </h1>
+            <h1 className="text-3xl sm:text-4xl font-bold tracking-tight bg-gradient-to-r from-blue-600 to-indigo-500 bg-clip-text text-transparent dark:[text-shadow:0_0_5px_rgba(255,255,255,0.5)]">{t('main_title')}</h1>
             <p className="text-sm sm:text-base text-slate-500 dark:text-slate-400 font-medium">{t('subtitle')}</p>
           </div>
           <div className="flex items-center bg-slate-200 dark:bg-gray-700 rounded-full p-1 text-sm font-medium whitespace-nowrap">
