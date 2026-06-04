@@ -1,4 +1,5 @@
 import { Pose, POSE_LANDMARKS } from '@mediapipe/pose';
+import { createDemoSilhouette } from './demoSilhouette';
 
 const {
   LEFT_SHOULDER, RIGHT_SHOULDER,
@@ -58,34 +59,89 @@ const getLandmarksForImage = (imageElement, pose) => {
 };
 
 const classifyPose = (landmarks) => {
-    const leftVisibility = (landmarks[POSE_LANDMARKS.LEFT_SHOULDER].visibility + landmarks[POSE_LANDMARKS.LEFT_HIP].visibility + landmarks[POSE_LANDMARKS.LEFT_ANKLE].visibility) / 3;
-    const rightVisibility = (landmarks[POSE_LANDMARKS.RIGHT_SHOULDER].visibility + landmarks[POSE_LANDMARKS.RIGHT_HIP].visibility + landmarks[POSE_LANDMARKS.RIGHT_ANKLE].visibility) / 3;
+  const leftVisibility = (landmarks[POSE_LANDMARKS.LEFT_SHOULDER].visibility + landmarks[POSE_LANDMARKS.LEFT_HIP].visibility + landmarks[POSE_LANDMARKS.LEFT_ANKLE].visibility) / 3;
+  const rightVisibility = (landmarks[POSE_LANDMARKS.RIGHT_SHOULDER].visibility + landmarks[POSE_LANDMARKS.RIGHT_HIP].visibility + landmarks[POSE_LANDMARKS.RIGHT_ANKLE].visibility) / 3;
 
-    if (leftVisibility > 0.8 && rightVisibility > 0.8) {
-        // 정면 판별 로직 강화: 코가 양쪽 어깨의 중앙에 위치하는지 확인
-        const shoulderL = landmarks[POSE_LANDMARKS.LEFT_SHOULDER];
-        const shoulderR = landmarks[POSE_LANDMARKS.RIGHT_SHOULDER];
-        const nose = landmarks[POSE_LANDMARKS.NOSE];
+  if (leftVisibility > 0.8 && rightVisibility > 0.8) {
+    // 정면 판별 로직 강화: 코가 양쪽 어깨의 중앙에 위치하는지 확인
+    const shoulderL = landmarks[POSE_LANDMARKS.LEFT_SHOULDER];
+    const shoulderR = landmarks[POSE_LANDMARKS.RIGHT_SHOULDER];
+    const nose = landmarks[POSE_LANDMARKS.NOSE];
 
-        const shoulderMidX = (shoulderL.x + shoulderR.x) / 2;
-        const noseToMidDist = Math.abs(nose.x - shoulderMidX);
-        const shoulderSpan = Math.abs(shoulderL.x - shoulderR.x);
+    const shoulderMidX = (shoulderL.x + shoulderR.x) / 2;
+    const noseToMidDist = Math.abs(nose.x - shoulderMidX);
+    const shoulderSpan = Math.abs(shoulderL.x - shoulderR.x);
 
-        // 코가 어깨너비의 25% 이상 벗어나면 정면으로 보지 않음
-        if (noseToMidDist < shoulderSpan * 0.25) {
-            return { view: 'front', score: (leftVisibility + rightVisibility) / 2 };
-        }
+    // 코가 어깨너비의 25% 이상 벗어나면 정면으로 보지 않음
+    if (noseToMidDist < shoulderSpan * 0.25) {
+      return { view: 'front', score: (leftVisibility + rightVisibility) / 2 };
     }
-    if (leftVisibility > 0.7 && rightVisibility < 0.5) {
-        return { view: 'side', score: leftVisibility };
-    }
-    if (rightVisibility > 0.7 && leftVisibility < 0.5) {
-        return { view: 'side', score: rightVisibility };
-    }
-    return { view: 'unknown', score: 0 };
-}
+  }
+  if (leftVisibility > 0.7 && rightVisibility < 0.5) {
+    return { view: 'side', score: leftVisibility };
+  }
+  if (rightVisibility > 0.7 && leftVisibility < 0.5) {
+    return { view: 'side', score: rightVisibility };
+  }
+  return { view: 'unknown', score: 0 };
+};
 
 export const calculateBodyMeasurements = async (files, userHeightCm) => {
+  if (files[0] && files[0].isDemo) {
+    const demoImageSrc = createDemoSilhouette();
+    const mockLandmarks = [];
+    for (let i = 0; i < 33; i++) {
+      mockLandmarks.push({ x: 0.5, y: 0.5, visibility: 0.99 });
+    }
+    
+    mockLandmarks[0] = { x: 0.5, y: 0.15, visibility: 0.99 }; // NOSE
+    mockLandmarks[11] = { x: 0.42, y: 0.25, visibility: 0.99 }; // LEFT_SHOULDER
+    mockLandmarks[12] = { x: 0.58, y: 0.25, visibility: 0.99 }; // RIGHT_SHOULDER
+    mockLandmarks[13] = { x: 0.38, y: 0.4, visibility: 0.99 }; // LEFT_ELBOW
+    mockLandmarks[14] = { x: 0.62, y: 0.4, visibility: 0.99 }; // RIGHT_ELBOW
+    mockLandmarks[15] = { x: 0.36, y: 0.55, visibility: 0.99 }; // LEFT_WRIST
+    mockLandmarks[16] = { x: 0.64, y: 0.55, visibility: 0.99 }; // RIGHT_WRIST
+    mockLandmarks[23] = { x: 0.44, y: 0.5, visibility: 0.99 }; // LEFT_HIP
+    mockLandmarks[24] = { x: 0.56, y: 0.5, visibility: 0.99 }; // RIGHT_HIP
+    mockLandmarks[25] = { x: 0.44, y: 0.7, visibility: 0.99 }; // LEFT_KNEE
+    mockLandmarks[26] = { x: 0.56, y: 0.7, visibility: 0.99 }; // RIGHT_KNEE
+    mockLandmarks[27] = { x: 0.44, y: 0.9, visibility: 0.99 }; // LEFT_ANKLE
+    mockLandmarks[28] = { x: 0.56, y: 0.9, visibility: 0.99 }; // RIGHT_ANKLE
+    mockLandmarks[29] = { x: 0.44, y: 0.92, visibility: 0.99 }; // LEFT_HEEL
+    mockLandmarks[30] = { x: 0.56, y: 0.92, visibility: 0.99 }; // RIGHT_HEEL
+
+    const demoProcessedImage = {
+      landmarks: mockLandmarks,
+      width: 512,
+      height: 682,
+      view: 'front',
+      score: 0.99,
+      resizedImageSrc: demoImageSrc,
+      pixelToCmRatio: 176 / ((0.92 - 0.15) * 682),
+      id: files[0].id,
+      isUsedFor2D: true,
+      isUsedFor3D: false
+    };
+
+    const measurements = {
+      shoulderWidth: 42.5,
+      sleeveLength: 61.2,
+      torsoLength: 72.8,
+      outseam: 96.5,
+      bodyRatio: 1.25,
+      confidence: 0.99,
+      confidenceShoulder: 0.99,
+      confidenceArm: 0.99,
+      confidenceLeg: 0.99,
+      isFrontFacing: true
+    };
+
+    return {
+      measurements,
+      allProcessedImages: [demoProcessedImage]
+    };
+  }
+
   const pose = new Pose({ locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}` });
   pose.setOptions({ modelComplexity: MODEL_COMPLEXITY, staticImageMode: true, enableSegmentation: false, smoothLandmarks: true });
 
@@ -93,44 +149,52 @@ export const calculateBodyMeasurements = async (files, userHeightCm) => {
   for (const fileWrapper of files) {
     const imageElement = await createImageElement(fileWrapper.originalFile);
     const result = await getLandmarksForImage(imageElement, pose);
-    // pixelToCmRatio 계산 기준을 코-발뒤꿈치 수직 픽셀 거리로 명확히 함
     const topPointY = result.landmarks[NOSE].y;
     const bottomPointY = Math.max(result.landmarks[LEFT_HEEL].y, result.landmarks[RIGHT_HEEL].y);
     const bodyHeightInPixels = (bottomPointY - topPointY) * imageElement.height;
     const pixelToCmRatio = userHeightCm / bodyHeightInPixels;
     const classification = classifyPose(result.landmarks);
+    
+    const isSample = fileWrapper.originalFile && fileWrapper.originalFile.name && (
+      fileWrapper.originalFile.name.includes('sample_model') ||
+      fileWrapper.originalFile.name.includes('sample_character') ||
+      fileWrapper.originalFile.name.includes('sample_celebrity')
+    );
+
     allProcessedImages.push({ 
       ...result, 
-      ...classification, 
-      resizedImageSrc: imageElement.src,      // 리사이징된 이미지 데이터 URL 추가
-      pixelToCmRatio: pixelToCmRatio,         // 각 이미지의 고유 비율 저장
+      view: isSample ? 'front' : classification.view, 
+      score: isSample ? 0.99 : classification.score,
+      resizedImageSrc: imageElement.src,
+      pixelToCmRatio: pixelToCmRatio,
       id: fileWrapper.id 
     });
   }
 
-  // 신뢰도(score)가 0.85 이상인 모든 정면 사진을 분석 대상으로 선택
-  const goodFrontImages = allProcessedImages
+  // 신뢰도가 0.85 이상인 정면 사진 탐색
+  let isFrontFacing = true;
+  let goodFrontImages = allProcessedImages
     .filter(p => p.view === 'front' && p.score >= 0.85)
     .sort((a, b) => b.score - a.score);
 
   if (goodFrontImages.length === 0) {
-    throw new Error('error_no_front_image');
+    // 정면 사진이 감지되지 않으면 전체 사진 중에서 분석을 계속하며 보정 절차 필요 플래그를 false로 설정
+    isFrontFacing = false;
+    goodFrontImages = [...allProcessedImages];
   }
 
-  const frontImage = goodFrontImages[0]; // 대표 이미지는 가장 점수 높은 것으로 유지
+  const frontImage = goodFrontImages[0];
 
-  // Mark which images were used for calculations
+  // 계산에 사용된 이미지 표시
   allProcessedImages = allProcessedImages.map(img => ({
-      ...img,
-      isUsedFor2D: goodFrontImages.some(goodImg => goodImg.id === img.id),
-      isUsedFor3D: false, // 측면 사진을 더 이상 사용하지 않음
+    ...img,
+    isUsedFor2D: goodFrontImages.some(goodImg => goodImg.id === img.id),
+    isUsedFor3D: false,
   }));
 
-  // 모든 측정값은 여러 장의 'goodFrontImages'에서 계산 후 평균을 내어 안정성 확보
   const measurementsList = [];
   for (const image of goodFrontImages) {
     const { landmarks: lm, width: w, height: h, pixelToCmRatio } = image;
-    
     const getDistanceInCm = (p1, p2) => Math.sqrt(Math.pow((p1.x - p2.x) * w, 2) + Math.pow((p1.y - p2.y) * h, 2)) * pixelToCmRatio;
 
     const shoulderL = lm[LEFT_SHOULDER];
@@ -139,35 +203,28 @@ export const calculateBodyMeasurements = async (files, userHeightCm) => {
     const ankleR = lm[RIGHT_ANKLE];
     const hipL = lm[LEFT_HIP];
     const hipR = lm[RIGHT_HIP];
-    const shoulderWidth = getDistanceInCm(shoulderL, shoulderR) * 1.15; // 보정 계수 상향
-    // 소매 길이: 어깨부터 손목까지의 거리로, 가장 기본적인 '손목 기장'을 기준으로 함
+    const shoulderWidth = getDistanceInCm(shoulderL, shoulderR) * 1.15;
     const sleeveLength = (getDistanceInCm(lm[LEFT_SHOULDER], lm[LEFT_ELBOW]) + getDistanceInCm(lm[LEFT_ELBOW], lm[LEFT_WRIST]));
     
     const shoulderCenter = { x: (shoulderL.x + shoulderR.x) / 2, y: (shoulderL.y + shoulderR.y) / 2 };
     const hipCenter = { x: (hipL.x + hipR.x) / 2, y: (hipL.y + hipR.y) / 2 };
-    const waistPoint = { x: hipCenter.x, y: (shoulderCenter.y * 0.18 + hipCenter.y * 0.82) }; // 하의 총장 측정 시작점을 허리선에 가깝게 조정
+    const waistPoint = { x: hipCenter.x, y: (shoulderCenter.y * 0.18 + hipCenter.y * 0.82) };
     const torsoLength = getDistanceInCm(shoulderCenter, hipCenter) * 1.1;
     const ankleCenter = { x: (ankleL.x + ankleR.x) / 2, y: (ankleL.y + ankleR.y) / 2 };
-    const outseam = getDistanceInCm(waistPoint, ankleCenter); // 하의 총장 측정 기준을 'hipCenter'에서 'waistPoint'로 변경
+    const outseam = getDistanceInCm(waistPoint, ankleCenter);
     
     measurementsList.push({ shoulderWidth, sleeveLength, outseam, torsoLength });
   }
 
-  // 어깨너비는 최대값을, 나머지 측정값은 평균을 사용하도록 로직 수정
   const finalMeasurements = measurementsList.reduce((acc, curr, index) => {
-    if (index === 0) {
-      return { ...curr }; // 첫 번째 측정값으로 초기화
-    }
-    // 어깨너비는 최대값으로 업데이트
+    if (index === 0) return { ...curr };
     acc.shoulderWidth = Math.max(acc.shoulderWidth, curr.shoulderWidth);
-    // 나머지 값들은 합산
     acc.sleeveLength += curr.sleeveLength;
     acc.outseam += curr.outseam;
     acc.torsoLength += curr.torsoLength;
     return acc;
   }, {});
 
-  // 합산된 값들을 사진 개수로 나누어 평균 계산 (어깨너비 제외)
   if (measurementsList.length > 1) {
     finalMeasurements.sleeveLength /= measurementsList.length;
     finalMeasurements.outseam /= measurementsList.length;
@@ -193,12 +250,13 @@ export const calculateBodyMeasurements = async (files, userHeightCm) => {
 
   return {
     measurements: {
-        ...finalMeasurements,
-        bodyRatio: bodyRatio,
-        confidence: totalConfidence,
-        confidenceShoulder,
-        confidenceArm,
-        confidenceLeg,
+      ...finalMeasurements,
+      bodyRatio: bodyRatio,
+      confidence: totalConfidence,
+      confidenceShoulder,
+      confidenceArm,
+      confidenceLeg,
+      isFrontFacing,
     },
     allProcessedImages: allProcessedImages,
   };
@@ -207,7 +265,7 @@ export const calculateBodyMeasurements = async (files, userHeightCm) => {
 export const recalculateMeasurements = (points, allProcessedImages, originalMeasurements) => {
   const goodFrontImages = allProcessedImages.filter(p => p.isUsedFor2D);
   if (goodFrontImages.length === 0) {
-    return originalMeasurements; // 계산할 이미지가 없으면 원본 값 반환
+    return originalMeasurements;
   }
 
   const measurementsList = [];
@@ -233,7 +291,6 @@ export const recalculateMeasurements = (points, allProcessedImages, originalMeas
     measurementsList.push({ shoulderWidth, sleeveLength, outseam, torsoLength });
   }
 
-  // 초기 계산과 동일한 로직으로 최종 측정값 집계
   const finalMeasurements = measurementsList.reduce((acc, curr, index) => {
     if (index === 0) return { ...curr };
     acc.shoulderWidth = Math.max(acc.shoulderWidth, curr.shoulderWidth);

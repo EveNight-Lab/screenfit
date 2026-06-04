@@ -3,6 +3,7 @@ import { useTranslation, Trans } from 'react-i18next';
 import Uploader from './components/Uploader';
 import ResultDisplay from './components/ResultDisplay';
 import { calculateBodyMeasurements } from './utils/measurement';
+import { sampleModelData } from './utils/sampleData';
 import HelpSection from './components/HelpSection';
 
 function App() {
@@ -33,20 +34,24 @@ function App() {
   const [state, dispatch] = useReducer(reducer, initialState);
   const { measurements, error, isLoading, processedImages } = state;
   const [isHelpVisible, setHelpVisible] = useState(false);
+  const [currentTip, setCurrentTip] = useState('');
 
   const loadingTips = useMemo(() => [
-    t('loading_tip1'),
-    t('loading_tip2'),
-    t('loading_tip3'),
-    t('loading_tip4'),
+    t('loading_tip_1'),
+    t('loading_tip_2'),
+    t('loading_tip_3'),
+    t('loading_tip_4'),
   ], [t]);
-  const [currentTip, setCurrentTip] = useState(loadingTips[0]);
 
   useEffect(() => {
     if (isLoading) {
+      setCurrentTip(loadingTips[0]);
       const tipInterval = setInterval(() => {
-        const randomIndex = Math.floor(Math.random() * loadingTips.length);
-        setCurrentTip(loadingTips[randomIndex]);
+        setCurrentTip(prevTip => {
+          const currentIndex = loadingTips.indexOf(prevTip);
+          const nextIndex = (currentIndex + 1) % loadingTips.length;
+          return loadingTips[nextIndex];
+        });
       }, 3500); // 3.5초마다 팁 변경
 
       return () => clearInterval(tipInterval);
@@ -73,6 +78,33 @@ function App() {
       dispatch({ type: 'ANALYSIS_FAILURE', payload: errorMessage });
     }
   }, [t]);
+
+  const handleSelectSample = useCallback(async (modelKey) => {
+    const sample = sampleModelData[modelKey];
+    if (!sample) return;
+
+    dispatch({ type: 'START_ANALYSIS' });
+
+    try {
+      const response = await fetch(`${process.env.PUBLIC_URL}/assets/${modelKey}.png`);
+      if (!response.ok) throw new Error('Failed to load sample image');
+      const blob = await response.blob();
+      
+      const file = new File([blob], `${modelKey}.png`, { type: 'image/png' });
+      const fileWrapper = {
+        id: modelKey,
+        originalFile: file,
+        preview: URL.createObjectURL(file)
+      };
+
+      const analysisResult = await calculateBodyMeasurements([fileWrapper], sample.height);
+      const { measurements: results, allProcessedImages } = analysisResult;
+      
+      dispatch({ type: 'ANALYSIS_SUCCESS', payload: { measurements: results, processedImages: allProcessedImages } });
+    } catch (err) {
+      dispatch({ type: 'ANALYSIS_FAILURE', payload: err.message });
+    }
+  }, []);
 
   const resetState = useCallback(() => {
     dispatch({ type: 'RESET' });
@@ -118,31 +150,33 @@ function App() {
 
     return (
       <>
-        <Uploader onAnalysis={handleAnalysis} />
+        <Uploader onAnalysis={handleAnalysis} onSelectSampleInstant={handleSelectSample} />
       </>
     );
   }
 
   return (
-    <div className="bg-slate-100 dark:bg-gray-900 min-h-screen font-sans antialiased break-keep selection:bg-blue-200 dark:selection:bg-blue-800/50">
+    <div className="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-gray-950 min-h-screen font-sans antialiased break-keep selection:bg-blue-200 dark:selection:bg-blue-800/50">
       <div className="container mx-auto p-4 sm:p-6 lg:p-8">
-        <header className="flex justify-between items-center mb-8">
-          <div className="flex items-center gap-3">
-            <h1 className="text-3xl sm:text-4xl font-bold tracking-tight bg-gradient-to-r from-blue-600 to-indigo-500 bg-clip-text text-transparent dark:[text-shadow:0_0_5px_rgba(255,255,255,0.5)]">
-              <Trans i18nKey="main_title" />
-            </h1>
-            <button onClick={() => setHelpVisible(!isHelpVisible)} className="text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors" aria-label={t('help_title')}>
-              <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd"></path></svg>
-            </button>
-            <p className="text-sm sm:text-base text-slate-500 dark:text-slate-400 font-medium">{t('subtitle')}</p>
+        <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-left">
+            <div className="flex items-center gap-2">
+              <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight bg-gradient-to-r from-blue-600 via-indigo-500 to-purple-600 bg-clip-text text-transparent dark:from-blue-400 dark:via-indigo-300 dark:to-purple-400 dark:[text-shadow:0_0_15px_rgba(99,102,241,0.2)]">
+                <Trans i18nKey="main_title" />
+              </h1>
+              <button onClick={() => setHelpVisible(!isHelpVisible)} className="text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors" aria-label={t('help_title')}>
+                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd"></path></svg>
+              </button>
+            </div>
+            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-medium">{t('subtitle')}</p>
           </div>
-          <div className="flex items-center bg-slate-200 dark:bg-gray-700 rounded-full p-1 text-sm font-medium whitespace-nowrap">
-            <button onClick={() => handleLanguageChange('ko')} className={`px-4 py-1 rounded-full transition-colors ${i18n.language.startsWith('ko') ? 'bg-white text-blue-600 shadow' : 'text-slate-600 dark:text-slate-300'}`}>한국어</button>
-            <button onClick={() => handleLanguageChange('en')} className={`px-4 py-1 rounded-full transition-colors ${i18n.language.startsWith('en') ? 'bg-white text-blue-600 shadow' : 'text-slate-600 dark:text-slate-300'}`}>English</button>
+          <div className="flex items-center bg-slate-200 dark:bg-gray-700/50 rounded-full p-1 text-sm font-medium whitespace-nowrap backdrop-blur-sm self-end sm:self-auto">
+            <button onClick={() => handleLanguageChange('ko')} className={`px-4 py-1 rounded-full transition-all duration-300 ${i18n.language.startsWith('ko') ? 'bg-white dark:bg-gray-800 text-blue-600 dark:text-indigo-400 shadow-sm' : 'text-slate-600 dark:text-slate-300'}`}>한국어</button>
+            <button onClick={() => handleLanguageChange('en')} className={`px-4 py-1 rounded-full transition-all duration-300 ${i18n.language.startsWith('en') ? 'bg-white dark:bg-gray-800 text-blue-600 dark:text-indigo-400 shadow-sm' : 'text-slate-600 dark:text-slate-300'}`}>English</button>
           </div>
         </header>
 
-        <main className="bg-white dark:bg-gray-800 p-4 sm:p-8 rounded-2xl shadow-xl transition-all duration-300 min-h-[500px]">
+        <main className="bg-white dark:bg-gray-800/90 p-4 sm:p-8 rounded-2xl shadow-xl transition-all duration-300 min-h-[500px] border border-slate-100 dark:border-gray-800">
           {renderContent()}
           {isHelpVisible && (
             <div className="mt-8 pt-8 border-t border-slate-200 dark:border-gray-700">
@@ -157,11 +191,11 @@ function App() {
           )}
         </footer>
         <div className="text-center mt-4">
-          <span className="text-sm font-semibold bg-gradient-to-r from-red-800 to-purple-600 bg-clip-text text-transparent dark:[text-shadow:0_0_5px_rgba(255,255,255,0.5)]">
+          <span className="text-sm font-semibold bg-gradient-to-r from-blue-600 to-indigo-500 bg-clip-text text-transparent dark:from-indigo-400 dark:to-purple-400">
             {t('brand_name')}
           </span>
-          <span className="mx-2 text-slate-500 dark:text-slate-400">|</span>
-          <a href="mailto:dorubru0331@gmail.com" className="text-sm text-slate-500 dark:text-slate-400 hover:underline">dorubru0331@gmail.com</a>
+          <span className="mx-2 text-slate-400 dark:text-slate-600">|</span>
+          <a href="mailto:junhk950331@gmail.com" className="text-sm text-slate-500 dark:text-slate-400 hover:underline">junhk950331@gmail.com</a>
         </div>
       </div>
     </div>
