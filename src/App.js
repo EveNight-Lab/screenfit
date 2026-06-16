@@ -5,9 +5,14 @@ import ResultDisplay from './components/ResultDisplay';
 import { calculateBodyMeasurements } from './utils/measurement';
 import { sampleModelData } from './utils/sampleData';
 import HelpSection from './components/HelpSection';
+import { trackVisitor } from './utils/visitorTracker';
 
 function App() {
   const { t, i18n } = useTranslation();
+
+  useEffect(() => {
+    trackVisitor();
+  }, []);
 
   const initialState = {
     measurements: null,
