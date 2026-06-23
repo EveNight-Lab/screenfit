@@ -195,12 +195,27 @@ function App() {
             <p className="mt-2 text-xs text-slate-400 dark:text-slate-500">{t('measurement_disclaimer')}</p>
           )}
         </footer>
-        <div className="text-center mt-4">
-          <span className="text-sm font-semibold bg-gradient-to-r from-blue-600 to-indigo-500 bg-clip-text text-transparent dark:from-indigo-400 dark:to-purple-400">
-            {t('brand_name')}
-          </span>
-          <span className="mx-2 text-slate-400 dark:text-slate-600">|</span>
-          <a href="mailto:junhk950331@gmail.com" className="text-sm text-slate-500 dark:text-slate-400 hover:underline">junhk950331@gmail.com</a>
+        <div className="text-center mt-4 flex flex-col items-center gap-1">
+          <div className="flex items-center justify-center gap-2 flex-wrap">
+            <span className="text-sm font-semibold bg-gradient-to-r from-blue-600 to-indigo-500 bg-clip-text text-transparent dark:from-indigo-400 dark:to-purple-400">
+              {t('brand_name')}
+            </span>
+            <span className="text-slate-400 dark:text-slate-600">|</span>
+            <span className="text-sm text-slate-500 dark:text-slate-400">제작자: 김저녁 (evenight)</span>
+            <span className="text-slate-400 dark:text-slate-600">|</span>
+            <a href="mailto:evenight331@gmail.com" className="text-sm text-slate-500 dark:text-slate-400 hover:underline">evenight331@gmail.com</a>
+          </div>
+          <a 
+            href="https://lab.evenight.dev" 
+            target="_blank" 
+            rel="noopener noreferrer" 
+            className="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors flex items-center justify-center gap-1 font-semibold mt-1"
+          >
+            <svg className="w-3.5 h-3.5 text-slate-400 fill-current" viewBox="0 0 24 24">
+              <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+            </svg>
+            <span>Evenight Lab 소속 프로젝트</span>
+          </a>
         </div>
       </div>
     </div>
