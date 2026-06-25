@@ -266,33 +266,50 @@ const ResultDisplay = ({ measurements, processedImages, onReset }) => {
               onAdjustmentChange={onAdjustmentChange}
             />
 
-            {/* Manual coordinate adjust toggler */}
-            {isCalibrated && (
-              <button
-                onClick={toggleAdjusting}
-                className={`absolute top-4 right-4 z-10 flex items-center gap-2 px-3.5 py-2 rounded-xl border backdrop-blur-md transition-all duration-300 shadow-md ${isAdjusting
-                    ? 'bg-emerald-500/25 border-emerald-500/50 text-emerald-300 font-bold ring-1 ring-emerald-500/20'
-                    : 'bg-slate-950/75 border-white/15 text-white/95 hover:bg-slate-900/90'
-                  }`}
-              >
-                <span className={`w-1.5 h-1.5 rounded-full ${isAdjusting ? 'bg-emerald-400 animate-ping' : 'bg-white/60'}`} />
-                <span className="text-[11px] font-semibold">{isAdjusting ? t('adjust_mode_active') : t('adjust_mode_toggle')}</span>
-              </button>
-            )}
+            {/* Top HUD and Controls Container to prevent overlapping on mobile */}
+            <div className="absolute top-3 left-3 right-3 z-10 flex justify-between items-start gap-2 pointer-events-none">
+              {/* Status hud overlay */}
+              <div className="flex flex-col space-y-0.5 sm:space-y-1 text-left bg-slate-950/75 backdrop-blur-md p-1.5 sm:p-2 px-2 sm:px-2.5 rounded-xl border border-white/10 select-none">
+                <div className="flex items-center gap-1.5">
+                  <span className={`w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full ${isCalibrated ? 'bg-emerald-500' : 'bg-indigo-500'}`} />
+                  <span className="text-[8px] sm:text-[9px] font-mono font-bold tracking-wider text-slate-300 uppercase">
+                    {isCalibrated ? (isAdjusting ? t('system_manual_edit') : t('system_locked_calibration')) : t('system_3d_calibration')}
+                  </span>
+                </div>
+                <span className="text-[7px] sm:text-[8px] font-mono text-slate-400/80">
+                  V-CORR: x{(1 / Math.cos((calibration.pitch * Math.PI) / 180)).toFixed(2)} | H-CORR: x{(1 / Math.cos((calibration.yaw * Math.PI) / 180)).toFixed(2)}
+                </span>
+              </div>
 
-            {/* Clear edit point modifications */}
-            {isCalibrated && isAdjusting && (
-              <button
-                onClick={handleResetPoints}
-                className="absolute top-16 right-4 z-10 flex items-center gap-1.5 px-3 py-1.5 bg-rose-500/25 border border-rose-500/40 text-rose-300 font-bold rounded-xl backdrop-blur-md hover:bg-rose-500/45 text-[10px] transition-all"
-              >
-                {t('dot_reset', '도트 초기화')}
-              </button>
-            )}
+              {/* Top Right Controls */}
+              <div className="flex flex-col items-end gap-1.5 pointer-events-auto">
+                {isCalibrated && (
+                  <button
+                    onClick={toggleAdjusting}
+                    className={`flex items-center gap-1.5 px-2.5 py-1.5 sm:px-3.5 sm:py-2 rounded-xl border backdrop-blur-md transition-all duration-300 shadow-md ${isAdjusting
+                        ? 'bg-emerald-500/25 border-emerald-500/50 text-emerald-300 font-bold ring-1 ring-emerald-500/20'
+                        : 'bg-slate-950/75 border-white/15 text-white/95 hover:bg-slate-900/90'
+                      }`}
+                  >
+                    <span className={`w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full ${isAdjusting ? 'bg-emerald-400 animate-ping' : 'bg-white/60'}`} />
+                    <span className="text-[9px] sm:text-[11px] font-semibold">{isAdjusting ? t('adjust_mode_active') : t('adjust_mode_toggle')}</span>
+                  </button>
+                )}
 
-            {/* Calibration warning for offset angles */}
+                {isCalibrated && isAdjusting && (
+                  <button
+                    onClick={handleResetPoints}
+                    className="flex items-center gap-1 px-2.5 py-1 bg-rose-500/25 border border-rose-500/40 text-rose-300 font-bold rounded-xl backdrop-blur-md hover:bg-rose-500/45 text-[9px] sm:text-[10px] transition-all"
+                  >
+                    {t('dot_reset', '도트 초기화')}
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Calibration warning for offset angles (pushed down slightly) */}
             {isCalibrated && isAdjusting && (Math.abs(calibration.yaw) > 10 || Math.abs(calibration.pitch) > 7) && (
-              <div className="absolute top-16 left-1/2 -translate-x-1/2 z-10 w-[80%] bg-amber-500/20 border border-amber-500/35 text-amber-200 text-[10px] font-medium px-3 py-1.5 rounded-xl backdrop-blur-md text-center">
+              <div className="absolute top-28 left-1/2 -translate-x-1/2 z-10 w-[85%] bg-amber-500/20 border border-amber-500/35 text-amber-200 text-[9px] sm:text-[10px] font-medium px-3 py-1.5 rounded-xl backdrop-blur-md text-center">
                 ⚠️ 3D 각도가 보정되어 있습니다 ({calibration.yaw > 0 ? `+${calibration.yaw}` : calibration.yaw}°, {calibration.pitch > 0 ? `+${calibration.pitch}` : calibration.pitch}°). 사진 속 사선/회전된 경계선에 맞춰 포인트를 편집해 주세요!
               </div>
             )}
@@ -301,24 +318,11 @@ const ResultDisplay = ({ measurements, processedImages, onReset }) => {
             {isCalibrated && (
               <button
                 onClick={() => setIsCalibrated(false)}
-                className="absolute bottom-4 right-4 bg-slate-950/80 border border-white/10 hover:border-white/25 text-slate-300 hover:text-white text-[10px] font-bold px-3 py-1.5 rounded-xl backdrop-blur-md transition-all flex items-center gap-1.5 z-10"
+                className="absolute bottom-3 right-3 bg-slate-950/80 border border-white/10 hover:border-white/25 text-slate-300 hover:text-white text-[9px] sm:text-[10px] font-bold px-3 py-1.5 rounded-xl backdrop-blur-md transition-all flex items-center gap-1.5 z-10"
               >
                 {t('angle_recalibrate', '각도 재보정')}
               </button>
             )}
-
-            {/* Status hud overlay */}
-            <div className="absolute top-4 left-4 z-10 flex flex-col space-y-1 text-left bg-slate-950/65 backdrop-blur-md p-2 px-2.5 rounded-xl border border-white/10 select-none pointer-events-none">
-              <div className="flex items-center gap-1.5">
-                <span className={`w-1.5 h-1.5 rounded-full ${isCalibrated ? 'bg-emerald-500' : 'bg-indigo-500'}`} />
-                <span className="text-[9px] font-mono font-bold tracking-wider text-slate-300 uppercase">
-                  {isCalibrated ? (isAdjusting ? t('system_manual_edit') : t('system_locked_calibration')) : t('system_3d_calibration')}
-                </span>
-              </div>
-              <span className="text-[8px] font-mono text-slate-400/80">
-                V-CORR: x{(1 / Math.cos((calibration.pitch * Math.PI) / 180)).toFixed(2)} | H-CORR: x{(1 / Math.cos((calibration.yaw * Math.PI) / 180)).toFixed(2)}
-              </span>
-            </div>
 
             {processedImages.length > 1 && (
               <>
