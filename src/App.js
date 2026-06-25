@@ -201,12 +201,10 @@ function App() {
               {t('brand_name')}
             </span>
             <span className="text-slate-400 dark:text-slate-600">|</span>
-            <span className="text-sm text-slate-500 dark:text-slate-400">제작자: 김저녁 (evenight)</span>
-            <span className="text-slate-400 dark:text-slate-600">|</span>
             <a href="mailto:evenight331@gmail.com" className="text-sm text-slate-500 dark:text-slate-400 hover:underline">evenight331@gmail.com</a>
           </div>
           <a 
-            href="https://lab.evenight.dev" 
+            href="https://evenight.net" 
             target="_blank" 
             rel="noopener noreferrer" 
             className="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors flex items-center justify-center gap-1 font-semibold mt-1"

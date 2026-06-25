@@ -13,7 +13,7 @@ const ResultDisplay = ({ measurements, processedImages, onReset }) => {
   const { t } = useTranslation();
   const [notification, setNotification] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
-  
+
   // Initialize calibration states
   const [calibration, setCalibration] = useState({ pitch: 0, yaw: 0 });
   const [isCalibrated, setIsCalibrated] = useState(() => {
@@ -268,13 +268,12 @@ const ResultDisplay = ({ measurements, processedImages, onReset }) => {
 
             {/* Manual coordinate adjust toggler */}
             {isCalibrated && (
-              <button 
-                onClick={toggleAdjusting} 
-                className={`absolute top-4 right-4 z-10 flex items-center gap-2 px-3.5 py-2 rounded-xl border backdrop-blur-md transition-all duration-300 shadow-md ${
-                  isAdjusting 
-                  ? 'bg-emerald-500/25 border-emerald-500/50 text-emerald-300 font-bold ring-1 ring-emerald-500/20' 
-                  : 'bg-slate-950/75 border-white/15 text-white/95 hover:bg-slate-900/90'
-                }`}
+              <button
+                onClick={toggleAdjusting}
+                className={`absolute top-4 right-4 z-10 flex items-center gap-2 px-3.5 py-2 rounded-xl border backdrop-blur-md transition-all duration-300 shadow-md ${isAdjusting
+                    ? 'bg-emerald-500/25 border-emerald-500/50 text-emerald-300 font-bold ring-1 ring-emerald-500/20'
+                    : 'bg-slate-950/75 border-white/15 text-white/95 hover:bg-slate-900/90'
+                  }`}
               >
                 <span className={`w-1.5 h-1.5 rounded-full ${isAdjusting ? 'bg-emerald-400 animate-ping' : 'bg-white/60'}`} />
                 <span className="text-[11px] font-semibold">{isAdjusting ? t('adjust_mode_active') : t('adjust_mode_toggle')}</span>
@@ -283,7 +282,7 @@ const ResultDisplay = ({ measurements, processedImages, onReset }) => {
 
             {/* Clear edit point modifications */}
             {isCalibrated && isAdjusting && (
-              <button 
+              <button
                 onClick={handleResetPoints}
                 className="absolute top-16 right-4 z-10 flex items-center gap-1.5 px-3 py-1.5 bg-rose-500/25 border border-rose-500/40 text-rose-300 font-bold rounded-xl backdrop-blur-md hover:bg-rose-500/45 text-[10px] transition-all"
               >
@@ -300,7 +299,7 @@ const ResultDisplay = ({ measurements, processedImages, onReset }) => {
 
             {/* Re-open 3D alignment popup */}
             {isCalibrated && (
-              <button 
+              <button
                 onClick={() => setIsCalibrated(false)}
                 className="absolute bottom-4 right-4 bg-slate-950/80 border border-white/10 hover:border-white/25 text-slate-300 hover:text-white text-[10px] font-bold px-3 py-1.5 rounded-xl backdrop-blur-md transition-all flex items-center gap-1.5 z-10"
               >
@@ -337,11 +336,11 @@ const ResultDisplay = ({ measurements, processedImages, onReset }) => {
       </div>
 
       {isCalibrated && (
-        <ActionButtons 
-          canShare={canShare} 
-          handleCopy={handleCopy} 
-          handleSaveOrShare={handleSaveOrShare} 
-          onReset={onReset} 
+        <ActionButtons
+          canShare={canShare}
+          handleCopy={handleCopy}
+          handleSaveOrShare={handleSaveOrShare}
+          onReset={onReset}
         />
       )}
     </div>
